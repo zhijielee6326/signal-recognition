@@ -1,0 +1,7 @@
+torch
+numpy
+scipy
+matplotlib
+Pillow
+scikit-learn
+# Note: UHD/gnuradio and USRP drivers must be installed via OS packages (not pip)

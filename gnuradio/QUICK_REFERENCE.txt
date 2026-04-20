@@ -1,0 +1,64 @@
+╔══════════════════════════════════════════════════════════════════╗
+║          USRP天线对天线测试 - 快速参考卡                        ║
+╚══════════════════════════════════════════════════════════════════╝
+
+【硬件连接】
+  USRP TX/RX ──[天线1]── (10-50cm) ──[天线2]── USRP RX2
+
+【快速开始】
+  cd ~/毕设/gnuradio
+  source ~/毕设/venv/bin/activate
+  ./run_antenna_test.sh all 10
+
+【测试命令】
+  完整测试:    ./run_antenna_test.sh all 10
+  单音干扰:    ./run_antenna_test.sh tone 20
+  扫频干扰:    ./run_antenna_test.sh chirp 20
+  脉冲干扰:    ./run_antenna_test.sh pulse 20
+  宽带噪声:    ./run_antenna_test.sh noise 20
+  无干扰:      ./run_antenna_test.sh none 20
+
+【参数配置】
+  TX增益: 10 dB  (天线测试用低功率)
+  RX增益: 40 dB  (天线测试用高灵敏度)
+  采样率: 2 MHz
+  频率:   2.45 GHz
+
+【信号太强】
+  1. 增加天线距离
+  2. 降低TX增益 (5 dB)
+  3. 降低RX增益 (30 dB)
+
+【信号太弱】
+  1. 减小天线距离
+  2. 提高TX增益 (15 dB)
+  3. 提高RX增益 (45 dB)
+
+【检查环境】
+  python3 check_environment.py
+
+【实时监控】
+  python3 signal_receiver.py --serial "serial=7MFTKFU" --tx-type tone
+
+【故障排查】
+  找不到设备:   uhd_find_devices
+  检查权限:     groups | grep usrp
+  添加权限:     sudo usermod -a -G usrp $USER
+
+【预期结果】
+  天线测试准确率: 70-85%
+  (受环境影响，低于同轴线测试的85%+)
+
+【优化建议】
+  ✓ 固定天线位置
+  ✓ 避开金属物体
+  ✓ 关闭附近WiFi设备
+  ✓ 增加测试次数
+  ✓ 记录环境条件
+
+【相关文档】
+  ANTENNA_TEST_GUIDE.md  - 天线测试详细指南
+  QUICKSTART.md          - 快速开始
+  TEST_WORKFLOW.md       - 完整测试流程
+
+═══════════════════════════════════════════════════════════════════

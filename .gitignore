@@ -1,0 +1,27 @@
+# Python virtual environments
+venv/
+.venv/
+
+# Python bytecode
+__pycache__/
+*.pyc
+*.pyo
+
+# Large training datasets - keep only samples/
+CCNN/1_datasets/train/
+CCNN/1_datasets/test/
+CCNN/1_datasets/raw/
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Claude local settings
+.claude/
+
+# Duplicate CCNN/CCNN directory (mirror)
+CCNN/CCNN/

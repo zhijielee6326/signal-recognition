@@ -1,0 +1,72 @@
+{
+  "无干扰": {
+    "detected": "窄带AM(NAM)",
+    "confidence": 0.8,
+    "severity": "mild",
+    "quality": 57,
+    "fec": 2,
+    "fps": 15,
+    "tx_frames": 15,
+    "rx_frames": 9
+  },
+  "单音干扰(STJ)": {
+    "detected": "单音干扰(STJ)",
+    "confidence": 0.543,
+    "severity": "severe",
+    "quality": 23,
+    "fec": 3,
+    "fps": 10,
+    "tx_frames": 15,
+    "rx_frames": 9
+  },
+  "多音干扰(MTJ)": {
+    "detected": "扫频干扰(LFM)",
+    "confidence": 0.718,
+    "severity": "moderate",
+    "quality": 40,
+    "fec": 2,
+    "fps": 10,
+    "tx_frames": 14,
+    "rx_frames": 9
+  },
+  "扫频干扰(LFM)": {
+    "detected": "单音干扰(STJ)",
+    "confidence": 0.954,
+    "severity": "severe",
+    "quality": 20,
+    "fec": 3,
+    "fps": 10,
+    "tx_frames": 15,
+    "rx_frames": 9
+  },
+  "窄带AM(NAM)": {
+    "detected": "扫频干扰(LFM)",
+    "confidence": 1.0,
+    "severity": "moderate",
+    "quality": 43,
+    "fec": 2,
+    "fps": 10,
+    "tx_frames": 14,
+    "rx_frames": 9
+  },
+  "窄带FM(NFM)": {
+    "detected": "单音干扰(STJ)",
+    "confidence": 0.576,
+    "severity": "severe",
+    "quality": 29,
+    "fec": 3,
+    "fps": 10,
+    "tx_frames": 14,
+    "rx_frames": 8
+  },
+  "正弦波(SIN)": {
+    "detected": "单音干扰(STJ)",
+    "confidence": 0.956,
+    "severity": "severe",
+    "quality": 30,
+    "fec": 3,
+    "fps": 10,
+    "tx_frames": 13,
+    "rx_frames": 8
+  }
+}
