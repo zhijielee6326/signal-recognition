@@ -22,16 +22,28 @@ class InterferenceDetector:
         num_classes: 默认6类
         """
         self.num_classes = num_classes
-        self.interference_types = [
-            "扫频干扰(LFM)",   # 0
-            "多音干扰(MTJ)",   # 1
-            "窄带AM(NAM)",     # 2
-            "窄带FM(NFM)",     # 3
-            "单音干扰(STJ)",   # 4
-            "正弦波(SIN)"      # 5
-        ]
+        if num_classes >= 7:
+            self.interference_types = [
+                "扫频干扰(LFM)",   # 0
+                "多音干扰(MTJ)",   # 1
+                "窄带AM(NAM)",     # 2
+                "窄带FM(NFM)",     # 3
+                "单音干扰(STJ)",   # 4
+                "正弦波(SIN)",     # 5
+                "无干扰",          # 6
+            ]
+        else:
+            self.interference_types = [
+                "扫频干扰(LFM)",   # 0
+                "多音干扰(MTJ)",   # 1
+                "窄带AM(NAM)",     # 2
+                "窄带FM(NFM)",     # 3
+                "单音干扰(STJ)",   # 4
+                "正弦波(SIN)"      # 5
+            ]
         self.use_cnn = False
         self.detection_history = []
+        self.last_probs = None  # (num_classes,) softmax probabilities
         self.stats = {"total_samples": 0, "interference_count": 0}
 
         if model_path and ccnn_py:
@@ -141,6 +153,7 @@ class InterferenceDetector:
                 probs = torch.softmax(out, dim=1)
                 conf, pred = torch.max(probs, 1)
 
+            self.last_probs = probs.numpy()[0]  # (num_classes,)
             itype = self.interference_types[pred.item()]
             confidence = conf.item()
         else:

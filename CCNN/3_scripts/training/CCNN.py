@@ -23,7 +23,7 @@ from torch.utils.data import Dataset, DataLoader
 # # ------------------
 from scipy.fftpack import fft, fftshift
 
-matplotlib.rcParams['font.sans-serif'] = ['SimHei']  # 或其他支持中文的字体
+matplotlib.rcParams['font.sans-serif'] = ['DejaVu Sans']
 matplotlib.rcParams['font.family']='sans-serif'
 matplotlib.rcParams['axes.unicode_minus'] = False  # 正确显示负号
 

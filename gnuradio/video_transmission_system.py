@@ -68,7 +68,7 @@ TX_GAIN = 20
 RX_GAIN = 40
 SYMBOL_RATE = 500e3
 SAMPLES_PER_SYMBOL = int(SAMPLE_RATE / SYMBOL_RATE)  # 4
-BUFFER_SIZE = 4096
+BUFFER_SIZE = 8192
 
 # ==================== QPSK 星座图 ====================
 QPSK_CONSTELLATION = np.array([
@@ -487,8 +487,10 @@ class VideoSource:
 
 
 # ==================== 仿真信道 ====================
+
+
 class SimulatedChannel:
-    """仿真信道：模拟AWGN和干扰注入"""
+    """仿真信道：模拟AWGN和干扰注入（使用Python生成器，与训练数据一致）"""
 
     def __init__(self, snr_db=20, jsr_db=None, jammer_type=None):
         self.snr_db = snr_db
@@ -515,7 +517,41 @@ class SimulatedChannel:
         return result
 
     def _inject_jammer(self, signal: np.ndarray) -> np.ndarray:
-        """注入干扰信号"""
+        """注入干扰信号 — 使用Python生成器，与训练数据来源一致"""
+        try:
+            from usrp_model_test_v4 import GEN_MAP
+        except ImportError:
+            return self._inject_jammer_fallback(signal)
+
+        jtype_key = self.jammer_type.lower()
+        if jtype_key not in GEN_MAP:
+            return signal
+
+        gen_fn = GEN_MAP[jtype_key]
+        N = len(signal)
+        t_dur = N / SAMPLE_RATE
+
+        # 生成干扰信号（用位置参数，避免lambda关键字不匹配）
+        jammer = gen_fn(SYMBOL_RATE, 0, SAMPLE_RATE, t_dur)
+
+        # 缩放到目标JSR
+        sig_power = np.mean(np.abs(signal) ** 2)
+        target_jam_power = sig_power * (10 ** (self.jsr_db / 10))
+        jam_actual_power = np.mean(np.abs(jammer) ** 2)
+        if jam_actual_power > 1e-12:
+            jammer = jammer * np.sqrt(target_jam_power / jam_actual_power)
+
+        # 长度对齐
+        if len(jammer) < N:
+            reps = N // len(jammer) + 1
+            jammer = np.tile(jammer, reps)[:N]
+        else:
+            jammer = jammer[:N]
+
+        return (signal + jammer.astype(np.complex64)).astype(np.complex64)
+
+    def _inject_jammer_fallback(self, signal: np.ndarray) -> np.ndarray:
+        """生成器不可用时的简化回退"""
         sig_power = np.mean(np.abs(signal) ** 2)
         jammer_power = sig_power * (10 ** (self.jsr_db / 10))
         N = len(signal)
@@ -523,8 +559,7 @@ class SimulatedChannel:
 
         if self.jammer_type == 'stj':
             f0 = 100e3 * (np.random.rand() - 0.5)
-            jammer = np.sqrt(jammer_power) * np.exp(
-                1j * 2 * np.pi * f0 * t)
+            jammer = np.sqrt(jammer_power) * np.exp(1j * 2 * np.pi * f0 * t)
         elif self.jammer_type == 'mtj':
             jammer = np.zeros(N, dtype=complex)
             for f in [200e3, 400e3, 600e3]:
@@ -537,8 +572,7 @@ class SimulatedChannel:
                 1j * (2*np.pi*f0*t + np.pi*K*t**2))
         elif self.jammer_type == 'nfm':
             mod = np.cumsum(np.random.randn(N)) / SAMPLE_RATE * 100e3
-            jammer = np.sqrt(jammer_power) * np.exp(
-                1j * 2 * np.pi * mod)
+            jammer = np.sqrt(jammer_power) * np.exp(1j * 2 * np.pi * mod)
         elif self.jammer_type == 'nam':
             mod = np.random.randn(N)
             f0 = 150e3 * (np.random.rand() - 0.5)
@@ -679,6 +713,8 @@ class TransmissionController:
         }
         self._interference_count = 0
         self._no_interference_count = 0
+        self._pending_severity = None
+        self._severity_stable_count = 0
 
     def update(self, interference_type: str, confidence: float):
         """根据干扰识别结果更新传输参数"""
@@ -696,10 +732,18 @@ class TransmissionController:
             self._no_interference_count += 1
             self._interference_count = 0
 
-        # 确认干扰状态(连续5次检测到干扰才切换，8次无干扰才恢复)
-        if self._interference_count >= 5:
-            new_severity = severity
-        elif self._no_interference_count >= 8:
+        # 确认干扰状态(连续8次检测到干扰才切换，12次无干扰才恢复)
+        if self._interference_count >= 8:
+            # 干扰已确认，需连续3次同severity才切换级别
+            if severity != self._pending_severity:
+                self._pending_severity = severity
+                self._severity_stable_count = 0
+            self._severity_stable_count += 1
+            if self._severity_stable_count >= 3:
+                new_severity = severity
+            else:
+                new_severity = self.current_severity
+        elif self._no_interference_count >= 12:
             new_severity = 'none'
         else:
             new_severity = self.current_severity
@@ -711,6 +755,7 @@ class TransmissionController:
             self.target_fps = self.current_profile['fps']
             self.target_fec = self.current_profile['fec_redundancy']
             self.stats['profile_changes'] += 1
+            self._severity_stable_count = 0
             if new_severity != 'none':
                 self.stats['interference_events'] += 1
 
@@ -789,6 +834,9 @@ class VideoTransmissionSystem:
         self.last_interference_type = '无干扰'
         self.last_interference_conf = 0.0
         self.last_psd_features = {}
+        self.last_raw_signal = None       # (1024,) complex64
+        self.last_psd_raw = None          # (fft_size,) float64 PSD in dB
+        self.last_cnn_probs = None        # (7,) float32 softmax probabilities
         self.latency_ms = 0.0
         self.last_tx_frame = None
 
@@ -808,9 +856,29 @@ class VideoTransmissionSystem:
     def _init_ccnn(self, model_path, ccnn_path):
         """初始化CCNN干扰识别模型"""
         if model_path is None:
-            model_path = os.path.join(
-                SCRIPT_DIR, '..', 'CCNN', '2_models', 'best',
-                'ccnn_epoch_86_acc_0.9913.pth')
+            # 优先使用宽JSR模型
+            wide_jsr_dir = os.path.join(
+                SCRIPT_DIR, '..', 'CCNN', '2_models', 'wide_jsr')
+            if os.path.exists(wide_jsr_dir):
+                model_files = [f for f in os.listdir(wide_jsr_dir)
+                               if f.endswith('.pth')]
+                if model_files:
+                    # Select model with highest accuracy
+                    def parse_acc(fname):
+                        try:
+                            return float(fname.split('acc_')[1].replace('.pth', ''))
+                        except (IndexError, ValueError):
+                            return 0.0
+                    best_model = max(model_files, key=parse_acc)
+                    model_path = os.path.join(wide_jsr_dir, best_model)
+                else:
+                    model_path = os.path.join(
+                        SCRIPT_DIR, '..', 'CCNN', '2_models', 'best',
+                        'ccnn_epoch_86_acc_0.9913.pth')
+            else:
+                model_path = os.path.join(
+                    SCRIPT_DIR, '..', 'CCNN', '2_models', 'best',
+                    'ccnn_epoch_86_acc_0.9913.pth')
         if ccnn_path is None:
             ccnn_path = os.path.join(
                 SCRIPT_DIR, '..', 'CCNN', '3_scripts', 'training', 'CCNN.py')
@@ -818,7 +886,7 @@ class VideoTransmissionSystem:
         try:
             from cnn_interference_detector import InterferenceDetector
             self.ccnn_detector = InterferenceDetector(
-                model_path=model_path, ccnn_py=ccnn_path, num_classes=6)
+                model_path=model_path, ccnn_py=ccnn_path, num_classes=7)
             print("[CCNN] 模型加载成功")
         except Exception as e:
             print(f"[CCNN] 模型加载失败: {e}")
@@ -850,7 +918,7 @@ class VideoTransmissionSystem:
             usrp.set_rx_gain(RX_GAIN, 0)
             usrp.set_rx_antenna("RX2", 0)
             sa = _uhd.usrp.StreamArgs("fc32", "sc16")
-            sa.args = "recv_frame_size=8192,num_recv_frames=1024"
+            sa.args = "recv_frame_size=16384,num_recv_frames=512"
             self.usrp_trx['rx_stream'] = usrp.get_rx_stream(sa)
             self.usrp_trx['rx_queue'] = queue.Queue(maxsize=200)
 
@@ -1131,33 +1199,52 @@ class VideoTransmissionSystem:
     # ============ 干扰监测 ============
 
     def _monitor_interference(self, signal_data):
-        """执行干扰检测与识别"""
+        """执行干扰检测与识别 — CCNN直接输出7类（含无干扰）"""
         if len(signal_data) < 1024:
             return
 
-        # 第1级: 功率谱特征检测(二值判决)
-        has_intf, psd_conf, features = self.psd_detector.detect(signal_data)
+        # 保存原始信号（供可视化使用）
+        self.last_raw_signal = signal_data[:1024].copy()
+
+        # PSD提取特征（用于显示）
+        _, psd_conf, features = self.psd_detector.detect(signal_data)
         self.last_psd_features = features
 
-        if has_intf and psd_conf > 0.3:
-            # 第2级: CCNN干扰类型识别
-            if self.ccnn_detector:
-                try:
-                    intf_type, cnn_conf = self.ccnn_detector.detect(signal_data)
-                    self.last_interference_type = intf_type
-                    self.last_interference_conf = cnn_conf
-                    self.controller.update(intf_type, cnn_conf)
-                    return
-                except Exception as e:
-                    pass
+        # 计算并保存PSD原始功率谱（供可视化使用）
+        N = self.psd_detector.fft_size
+        data = signal_data[:N]
+        windowed = data * np.hanning(N)
+        spectrum = np.fft.fftshift(np.fft.fft(windowed, n=N))
+        psd = np.abs(spectrum) ** 2
+        self.last_psd_raw = 10 * np.log10(psd + 1e-12)
 
-            # 无CCNN时仅用功率谱检测
-            self.last_interference_type = '窄带AM(NAM)'  # 默认
+        # CCNN直接检测（7类模型含"无干扰"类）
+        if self.ccnn_detector:
+            try:
+                intf_type, cnn_conf = self.ccnn_detector.detect(signal_data)
+                self.last_interference_type = intf_type
+                self.last_interference_conf = cnn_conf
+                self.last_cnn_probs = self.ccnn_detector.last_probs
+
+                if intf_type == '无干扰':
+                    self.controller.update('无干扰', cnn_conf)
+                elif cnn_conf > 0.6:
+                    self.controller.update(intf_type, cnn_conf)
+                else:
+                    self.controller.update('无干扰', 1.0 - cnn_conf)
+                return
+            except Exception as e:
+                pass
+
+        # 无CCNN时仍用PSD检测
+        has_intf = features.get('peak_to_noise', 0) > 50 and features.get('norm_entropy', 1) < 0.5
+        if has_intf:
+            self.last_interference_type = '窄带AM(NAM)'
             self.last_interference_conf = psd_conf
             self.controller.update('窄带AM(NAM)', psd_conf)
         else:
             self.last_interference_type = '无干扰'
-            self.last_interference_conf = 1.0 - psd_conf
+            self.last_interference_conf = 1.0
             self.controller.update('无干扰', 1.0)
 
     # ============ 显示线程 ============

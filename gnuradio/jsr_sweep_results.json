@@ -1,0 +1,158 @@
+[
+  {
+    "jsr_db": -6,
+    "overall": 65.29,
+    "type_accs": {
+      "LFM": 66.0,
+      "MTJ": 90.0,
+      "NAM": 26.0,
+      "NFM": 71.0,
+      "STJ": 55.0,
+      "SIN": 49.0,
+      "CLEAN": 100.0
+    }
+  },
+  {
+    "jsr_db": -4,
+    "overall": 96.0,
+    "type_accs": {
+      "LFM": 100.0,
+      "MTJ": 97.0,
+      "NAM": 87.0,
+      "NFM": 99.0,
+      "STJ": 89.0,
+      "SIN": 100.0,
+      "CLEAN": 100.0
+    }
+  },
+  {
+    "jsr_db": -2,
+    "overall": 99.43,
+    "type_accs": {
+      "LFM": 100.0,
+      "MTJ": 98.0,
+      "NAM": 99.0,
+      "NFM": 100.0,
+      "STJ": 99.0,
+      "SIN": 100.0,
+      "CLEAN": 100.0
+    }
+  },
+  {
+    "jsr_db": 0,
+    "overall": 99.86,
+    "type_accs": {
+      "LFM": 100.0,
+      "MTJ": 99.0,
+      "NAM": 100.0,
+      "NFM": 100.0,
+      "STJ": 100.0,
+      "SIN": 100.0,
+      "CLEAN": 100.0
+    }
+  },
+  {
+    "jsr_db": 2,
+    "overall": 99.86,
+    "type_accs": {
+      "LFM": 100.0,
+      "MTJ": 99.0,
+      "NAM": 100.0,
+      "NFM": 100.0,
+      "STJ": 100.0,
+      "SIN": 100.0,
+      "CLEAN": 100.0
+    }
+  },
+  {
+    "jsr_db": 4,
+    "overall": 100.0,
+    "type_accs": {
+      "LFM": 100.0,
+      "MTJ": 100.0,
+      "NAM": 100.0,
+      "NFM": 100.0,
+      "STJ": 100.0,
+      "SIN": 100.0,
+      "CLEAN": 100.0
+    }
+  },
+  {
+    "jsr_db": 6,
+    "overall": 100.0,
+    "type_accs": {
+      "LFM": 100.0,
+      "MTJ": 100.0,
+      "NAM": 100.0,
+      "NFM": 100.0,
+      "STJ": 100.0,
+      "SIN": 100.0,
+      "CLEAN": 100.0
+    }
+  },
+  {
+    "jsr_db": 8,
+    "overall": 100.0,
+    "type_accs": {
+      "LFM": 100.0,
+      "MTJ": 100.0,
+      "NAM": 100.0,
+      "NFM": 100.0,
+      "STJ": 100.0,
+      "SIN": 100.0,
+      "CLEAN": 100.0
+    }
+  },
+  {
+    "jsr_db": 10,
+    "overall": 100.0,
+    "type_accs": {
+      "LFM": 100.0,
+      "MTJ": 100.0,
+      "NAM": 100.0,
+      "NFM": 100.0,
+      "STJ": 100.0,
+      "SIN": 100.0,
+      "CLEAN": 100.0
+    }
+  },
+  {
+    "jsr_db": 12,
+    "overall": 100.0,
+    "type_accs": {
+      "LFM": 100.0,
+      "MTJ": 100.0,
+      "NAM": 100.0,
+      "NFM": 100.0,
+      "STJ": 100.0,
+      "SIN": 100.0,
+      "CLEAN": 100.0
+    }
+  },
+  {
+    "jsr_db": 14,
+    "overall": 100.0,
+    "type_accs": {
+      "LFM": 100.0,
+      "MTJ": 100.0,
+      "NAM": 100.0,
+      "NFM": 100.0,
+      "STJ": 100.0,
+      "SIN": 100.0,
+      "CLEAN": 100.0
+    }
+  },
+  {
+    "jsr_db": 16,
+    "overall": 99.86,
+    "type_accs": {
+      "LFM": 100.0,
+      "MTJ": 99.0,
+      "NAM": 100.0,
+      "NFM": 100.0,
+      "STJ": 100.0,
+      "SIN": 100.0,
+      "CLEAN": 100.0
+    }
+  }
+]
