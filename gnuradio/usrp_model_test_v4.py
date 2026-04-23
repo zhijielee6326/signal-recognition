@@ -275,6 +275,7 @@ TYPE_LABEL = {
     'nfm': "窄带FM(NFM)",
     'stj': "单音干扰(STJ)",
     'sin': "正弦波(SIN)",
+    'clean': "无干扰",
 }
 
 
