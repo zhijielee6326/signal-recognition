@@ -70,16 +70,17 @@ def load_jsr_sweep_data():
 
 class SystemVisualizer:
 
-    def __init__(self, duration=45, demo=True):
+    def __init__(self, duration=120, demo=True, mode='sim'):
         self.duration = duration
         self.demo = demo
+        self.mode = mode
         self.start_time = None
         self.demo_index = 0
-        self.current_demo_label = "Clean"
+        self.current_demo_label = "Clean (Real-time RF)" if mode == 'full' else "Clean"
 
-        print("[Viz] Initializing system...")
+        print(f"[Viz] Initializing system (mode={mode})...")
         self.system = VideoTransmissionSystem(
-            mode='sim', source='test', no_gui=True)
+            mode=mode, source='test', no_gui=True)
         self.system.start()
         self.start_time = time.time()
         print("[Viz] System started. Building dashboard...")
@@ -219,11 +220,15 @@ class SystemVisualizer:
                 f'Predict: {INTF_FULL[pred_idx]}  ({cnn_probs[pred_idx]:.2f})')
 
         # --- 3) Time-domain ---
-        if raw_signal is not None:
+        if raw_signal is not None and len(raw_signal) > 0:
             n = min(512, len(raw_signal))
             x = np.arange(n)
             self.line_i.set_data(x, raw_signal[:n].real)
             self.line_q.set_data(x, raw_signal[:n].imag)
+            # Auto-scale y-axis to signal amplitude
+            amp = max(np.max(np.abs(raw_signal[:n].real)),
+                      np.max(np.abs(raw_signal[:n].imag)), 0.1)
+            self.ax_time.set_ylim(-amp * 1.3, amp * 1.3)
 
         # --- 4) Status info ---
         severity = s.controller.current_severity
@@ -255,6 +260,10 @@ class SystemVisualizer:
         return mapping.get(cn_name, cn_name)
 
     def _auto_demo(self, elapsed):
+        # Auto-demo only works in sim mode (injects via SimulatedChannel)
+        if self.mode != 'sim':
+            self.current_demo_label = "Real-time RF (USRP)"
+            return
         target_idx = 0
         for i, (t_start, _, _, _) in enumerate(DEMO_SEQUENCE):
             if elapsed >= t_start:
@@ -305,8 +314,11 @@ def main():
     parser = argparse.ArgumentParser(
         description='Real-time Visualization Dashboard')
     parser.add_argument(
-        '--duration', type=int, default=45,
-        help='Demo duration in seconds, 0=unlimited (default: 45)')
+        '--mode', choices=['sim', 'full'], default='sim',
+        help='System mode: sim (default) or full (USRP B210)')
+    parser.add_argument(
+        '--duration', type=int, default=120,
+        help='Demo duration in seconds, 0=unlimited (default: 120)')
     parser.add_argument(
         '--no-demo', action='store_true',
         help='Disable auto-demo sequence')
@@ -314,7 +326,8 @@ def main():
 
     viz = SystemVisualizer(
         duration=args.duration,
-        demo=not args.no_demo)
+        demo=not args.no_demo,
+        mode=args.mode)
     viz.run()
 
 
